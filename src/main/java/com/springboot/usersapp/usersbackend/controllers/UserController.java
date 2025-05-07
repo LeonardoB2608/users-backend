@@ -1,12 +1,18 @@
 package com.springboot.usersapp.usersbackend.controllers;
 
+import static jakarta.persistence.GenerationType.values;
+
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,9 +23,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.springboot.usersapp.usersbackend.entities.User;
 import com.springboot.usersapp.usersbackend.services.UserService;
+
+import jakarta.validation.Valid;
+
 import org.springframework.web.bind.annotation.PutMapping;
 
-
+@CrossOrigin(origins={"http://localhost:4200"})
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
@@ -43,12 +52,20 @@ public class UserController {
     }
     
     @PostMapping
-    public ResponseEntity<User> create(@RequestBody User user) {
+    public ResponseEntity<?> create(@Valid @RequestBody User user, BindingResult result) {
+        if (result.hasErrors()) {
+            return validationCrud(result);
+        }
         return ResponseEntity.status(HttpStatus.CREATED).body(service.save(user));
     }
 
+   
     @PutMapping("/{id}")
-    public ResponseEntity<User> update(@PathVariable Long id, @RequestBody User user) {
+    public ResponseEntity<?> update(@Valid @RequestBody User user,BindingResult result,@PathVariable Long id) {
+        if (result.hasErrors()) {
+            return validationCrud(result);
+        }
+       
         Optional<User> userOptional = service.findById(id);
 
         if (userOptional.isPresent()) {
@@ -72,5 +89,14 @@ public class UserController {
         }
         return ResponseEntity.notFound().build();
     }
+
+    private ResponseEntity<?> validationCrud(BindingResult result) {
+        Map<String, String> errors=new HashMap<>();
+        result.getFieldErrors().forEach(error ->{
+            errors.put(error.getField(), "EL campo " + error.getField() + " " + error.getDefaultMessage());
+        });
+        return ResponseEntity.badRequest().body(errors);
+    }
+
     
 }
